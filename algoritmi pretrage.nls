@@ -1,0 +1,234 @@
+;algoritmi za pretrazivanje grafa za najkraci put
+
+;korak pretrage se koristi se pretrage po sirini i dubini te za uniform cost algoritam
+to korak-pretrage;opceniti korak pretrage za jednog mrava koji se siri gdje ima prostora
+  foreach [susjedi]of vrh-here;svaki mrav koji nije na cilju gleda sve susjede vrha na kojem se nalazi
+  [
+    x -> if not member? x moj-put;ako susjed nije posjecen od strane trenutnog mrava,posjeti ga
+    [
+      hatch 1
+      [
+        let pocetak vrh-here;polje na kojem se dijete mrava trenutno nalazi
+        set prijedjeni-put prijedjeni-put + ([tezina]of one-of links with[(end1 = pocetak and end2 = x) or (end1 = x and end2 = pocetak)]);prije nego se pomaknemo,dodamo tezinu brida od trenutnog brida do susjeda x
+        move-to x;dijete mrava se pomakne na x
+        set vrh-here x
+        set na-cilju? false
+        set moj-put lput x moj-put
+        ask x [set posjecen? true];oznaci da je vrh posjecen
+        if [vrijednost]of x = Kraj-puta;ako je novi mrav dosao na cilj,postavimo mu to svojstvo
+        [
+          set na-cilju? true
+        ]
+        ;za ukupan broj agenata koristenih u algoritmu,svaki put kad se hatch-a ,povecamo broj ukupno koristenih agenata
+        if Algoritam = "Dubina"[set dubina-agenti dubina-agenti + 1]
+        if Algoritam = "Sirina"[set sirina-agenti sirina-agenti + 1]
+        if Algoritam = "Uniform cost"[set uniform-cost-agenti uniform-cost-agenti + 1]
+      ]
+    ]
+  ]
+  ;za broj koraka,kad zavrsimo korak algoritam,povecamo broj njegovih koraka za analizu
+  if Algoritam = "Dubina"[set dubina-ticks dubina-ticks + 1]
+  if Algoritam = "Sirina"[set sirina-ticks sirina-ticks + 1]
+  if Algoritam = "Uniform cost"[set uniform-ticks uniform-ticks + 1]
+  die;na kraju brisemo original,jer smo napravili njegove potomke koji dalje istrazuju
+end
+
+to dubina;pretraga je viseagentska ,iscrpna pretraga
+  set dubina-agenti 0
+  while[any? mravi with[na-cilju? = false]];dok ima mrava koji nisu stigli na cilj,smao njih pomicemo,oni koji su na cilju,ostaju na cilju
+  [
+    let lista mravi with [na-cilju? = false]
+    ask last sort-on[who]lista[korak-pretrage];zadnji mrav koji je stvoren se samo on siri
+    ;izbjegavamo skupe puteve
+    brisi-lose-puteve
+  ]
+end
+
+to sirina;pretraga je viseagentska ,iscrpna pretraga
+  set sirina-agenti 0
+  while [any? mravi with[na-cilju? = false]];dok ima mrava koji nisu dosli na cilj
+  [
+    ;jedan korak sirenja svih mravi
+    ask mravi with[na-cilju? = false];svi mravi koji nisu na cilju se sire u jednom koraku
+    [
+      korak-pretrage
+    ]
+    ;izbjegavamo skupe puteve
+    brisi-lose-puteve
+  ]
+end
+
+to uniform-cost;algoritam jednoliko troska,viseagentsko,iscrpna pretraga
+  set uniform-cost-agenti 0
+  let najbolji-put 1000000000000;varijabla u koju pamtimo najbolji/najkraci put od svih mravi koji su dosli na cilj
+  while [any? mravi with[na-cilju? = false]];dok ima mravi koji nisu dosli do cilja
+  [
+    ;ako jedan barem jedan mrav dodje do cilja,pamtimo od svih na cilju najkraci prijedjeni put,ako neki mrav u tijeku sirenja prijedje dulji put,njega brisemo iz simulacije
+    ;jer nema smisla da trazi put do cilja koji ce biti dulji,algoritam se zaustavi kad svi postojeci mravi u simulaciji su na cilju
+    let lista mravi with[na-cilju? = false];svi mravi koji se jos moraju pomicati,lista nije prazna jer smo usli u uvjet while petlje da takvi mravi postoje
+    ask first sort-on [prijedjeni-put]lista;pitamo mrava koji nije na cilju,a presao je dosad najkraci put
+    [
+      korak-pretrage;mrav se siri gdje nije bio dosad
+    ]
+    if any? mravi with[na-cilju?];nadjemo najbolji put od onih koji su na cilju
+    [
+      ask mravi with[na-cilju?]
+      [
+        if prijedjeni-put < najbolji-put [set najbolji-put prijedjeni-put]
+      ]
+    ]
+    brisi-lose-puteve
+  ]
+  
+end
+
+to pohlepni-algoritam;heuristika je udaljenost,ovo je algoritam najblizeg susjeda,jednoagentsko pretrazivanje,neiscrpna pretraga,osnovni algoritam lokalnog pretrazivanja
+  ;od svih susjeda koji nisu posjeceni trenutnog vrha ,na kojem se nalazi mrav,ide na onaj do kojeg najprije moze doci
+  ;ALGORITAM NIJE POTPUN,najjednostavnija varijanta algoritma
+  set pohlepni-rjesenje? true;za BEHAVIOR SPACE,da znamo je li nasao rjesenje
+  while[not any? (mravi with[na-cilju? ])];dok nijedan mrav nije na cilju,kad jedan mrav stigne na cilj,prekida se petlja
+  [
+    ask one-of mravi;pitamo mrav da ide tamo gdje je najmanja cijena
+    [
+      ;poredamo sve moguce vrhove na koje se moze siriti
+      let lista [];u ovom listi su svi moguci vrhovi na koje mrav moze ici,tj koji nisu posjeceni
+      foreach [susjedi]of vrh-here
+      [
+        x -> if not [posjecen?] of x [set lista lput x lista]
+      ]
+      let trenutni-vrh vrh-here;vrh na kojem se trenutno nalazi mrav
+      if length lista = 0[set pohlepni-rjesenje? false stop];ako mrav nema nigdje prostora,svi susjedni vrhovi su istrazeni,dosao je u slijepu ulicu,algoritam se prekida
+      let sljedeci first lista;sljedeci je varijabla sljedeceg vrha na koji mrav ide
+      ;trazimo takav vrh da mu je cijena prelaska(tezina) najmanja moguca u tom trenutku
+      foreach but-first lista;ne moramo usporedjivat prvog
+      [
+        x -> if ([tezina]of one-of links with[(end1 = trenutni-vrh and end2 = x) or (end1 = x and end2 = trenutni-vrh)]) < ([tezina]of one-of links with[(end1 = trenutni-vrh and end2 = sljedeci) or (end1 = sljedeci and end2 = trenutni-vrh)])
+        [
+          set sljedeci x;ako je tezina novog brida manja od tezine trenutnog najbolje,postavimo novog da je trenutni najbolji izbor
+        ]
+      ]
+      ;kad smo nasli sljedeceg na kojeg mrav ide,pomaknemo mrava na tog novog
+      set prijedjeni-put prijedjeni-put + [tezina]of one-of links with[(end1 = trenutni-vrh and end2 = sljedeci) or (end1 = sljedeci and end2 = trenutni-vrh)]
+      move-to sljedeci
+      set vrh-here sljedeci
+      set moj-put lput sljedeci moj-put
+      ask sljedeci [set posjecen? true];oznaci da je vrh posjecen
+      if [vrijednost]of sljedeci = Kraj-puta;ako je mrav dosao na cilj,postavimo mu to svojstvo
+      [
+        set na-cilju? true
+      ]
+    ]
+    set pohlepni-ticks pohlepni-ticks + 1;povecamo broj koraka pohlepnog algoritma
+    if not pohlepni-rjesenje? [show "Algoritam nije pronasao najkraci put." stop];ako algoritam nije nasao rjesenje izlazimo iz algoritma
+  ]
+end
+
+to tabu-pretraga;novi algoritam,nije koristen na vjezbama,opcenito poboljsanje pohlepnog algoritma
+  ;zelimo imati barem 5 vrhova da bi pretraga imala nekog smisla
+  if any? vrhovi[if count vrhovi < 5[show "Graf treba imati barem 5 vrhova." stop]]
+  ;kombinacija jednostavnog lokalnog najboljeg pretrazivanja sa kratkotrajnom memorijom posjecenih vrhova
+  ;koristi tabu-listu posjecenih vrhova u zadnjih nekoliko koraka,duljina je odredjena putem slidera,poboljsanje pohlepnog algoritma
+  set tabu-rjesenje? true;za BEHAVIOR SPACE,da znamo je li ova pretraga nasla rjesenje
+  let tabu-lista [];lista koja igra ulogu kratkotrajne memorije
+  let duljina-tabu-lista ceiling (postotak-tabu-lista * (count vrhovi)) ;odredimo kolika ce biti duljina-tabu liste u odnosu na broj-vrhova(25,50 ili 75 % od n)
+  let listovi [];oznacimo sve listove,tako da se ne moramo vracati na te putove ponovo
+  while[not any? mravi with[na-cilju?]];dok agent nije stigao do cilja
+  [
+    ;gleda trenutnu poziciju i sve vrhove koji nisu u tabu listi i ide na najboljeg od njih
+    let lista [];svi kandidati za sljedeci vrh
+    ask one-of mravi;jedini mrav
+    [
+      set tabu-lista lput vrh-here tabu-lista;dodamo vrh na kojem se nalazimo
+      if length tabu-lista > duljina-tabu-lista [set tabu-lista but-first tabu-lista];ako smo presli ogranicenje broja u tabu-listi,izbacimo prvog dodanog
+      ;setamo listom svih susjeda trenutnog vrha,i one koji nisu u tabu-listi dodamo u listu kandidata za sljedeci korak pretrage
+      foreach [susjedi] of vrh-here
+      [
+        susjed -> if (not member? susjed tabu-lista) and (not member? susjed listovi) [set lista lput susjed lista];ako trenutno promatrani susjed nije u tabu-listi,dodamo ga u listu kandidata za sljedeci korak
+      ]
+      ;promatramo listu kandidata,trazimo najbolji vrh
+      ifelse length lista = 0;ako su svi moguci susjedi u tabu-listi,izlazimo iz algoritma,nismo nasli rjesenje,jer je zadovoljen kriterij zaustavljanja
+      [
+        set tabu-rjesenje? false
+        stop
+      ]
+      [;ako imamo neko rjesenje u tom koraku
+        let sljedeci first lista;sljedeci je varijabla sljedeceg vrha na koji mrav ide
+        ;trazimo takav vrh da mu je cijena prelaska(tezina) najmanja moguca u tom trenutku
+        let trenutni-vrh vrh-here;trenutni vrh da znamo gdje se nalazimo u ovom koraku
+        foreach but-first lista;ne moramo usporedjivat prvog
+        [
+          x -> if ([tezina]of one-of links with[(end1 = trenutni-vrh and end2 = x) or (end1 = x and end2 = trenutni-vrh)]) < ([tezina]of one-of links with[(end1 = trenutni-vrh and end2 = sljedeci) or (end1 = sljedeci and end2 = trenutni-vrh)])
+          [
+            set sljedeci x;ako je tezina novog brida manja od tezine trenutnog najbolje,postavimo novog da je trenutni najbolji izbor
+          ]
+        ]
+        ;kad smo nasli sljedeceg na kojeg mrav ide,pomaknemo mrava na tog novog
+        set prijedjeni-put prijedjeni-put + [tezina]of one-of links with[(end1 = trenutni-vrh and end2 = sljedeci) or (end1 = sljedeci and end2 = trenutni-vrh)]
+        move-to sljedeci
+        set tabu-ticks tabu-ticks + 1;povecamo brojkoraka tabu algoritma
+        set vrh-here sljedeci
+        set moj-put lput sljedeci moj-put
+        ask sljedeci [set posjecen? true];oznaci da je vrh posjecen
+        if [vrijednost]of sljedeci = Kraj-puta;ako je novi mrav dosao na cilj,postavimo mu to svojstvo
+        [
+          set na-cilju? true
+        ]
+        ;brisemo duplikate iz tabu-liste
+        set tabu-lista remove-duplicates tabu-lista
+        ;gledamo je li list,ako je list i nije cilj,dodamo ga u listu ,koje necemo vise posjetiti
+        if ([vrijednost]of vrh-here != Kraj-puta) and (length[susjedi]of vrh-here = 1)
+        [
+          set listovi lput vrh-here listovi
+        ]
+      ]
+    ]
+    if not tabu-rjesenje? [show "Algoritam nije pronasao rješenje." stop];ako algoritam nije nasao rjesenje izlazimo iz njega
+  ]
+end
+
+to pretraga;glavna procedura pretrage
+  if not any? vrhovi [show "Graf nema vrhova." stop]
+  ifelse povezanost? and (any? vrhovi with[vrijednost = Pocetak-puta]) and (any? vrhovi with[vrijednost = Kraj-puta]) and Pocetak-puta != Kraj-puta;ako uopce ima vrhova i ako je graf povezan
+  [
+    if any? links[ask links [set color red set thickness 0.2]]
+    ask vrhovi[set color blue set posjecen? false];postavimo sve vrhove da su plavi,i da nsiu posjeceni
+    let pocetni-vrh one-of vrhovi with[vrijednost = Pocetak-puta] ask pocetni-vrh[set color green];pocetak puta
+    let krajnji-vrh one-of vrhovi with[vrijednost = Kraj-puta] ask krajnji-vrh [set color red];kraj puta
+    ask mravi[die];prvo uklonimo sve vec postojece mrave i pripremimo pocetak algoritma
+    ;stvorimo prvog mrava na pocetnom vrhu
+    create-mravi 1
+    [
+      move-to pocetni-vrh
+      set vrh-here pocetni-vrh
+      ask pocetni-vrh [set posjecen? true]
+      set prijedjeni-put 0
+      set na-cilju? false
+      set moj-put [] set moj-put lput vrh-here moj-put
+      set color yellow 
+    ]
+    ask links[set color red];na pocetku obojimo sve bridove u jednu boju
+    
+    ;algoritmi . . .
+    if Algoritam = "Sirina"[sirina]
+    if Algoritam = "Dubina"[dubina]
+    if Algoritam = "Pohlepni algoritam"[pohlepni-algoritam]
+    if Algoritam = "Uniform cost"[uniform-cost]
+    if Algoritam = "Tabu search"[tabu-pretraga]
+    
+    carefully
+    [
+      ;na kraju obojimo put od pocetka do kraja,napravimo usporedbu i dobijemo najbolji put
+      show (word "Najkraci put je " [prijedjeni-put]of first sort-on[prijedjeni-put](mravi with [na-cilju?]));sortiramo sve mrave koji su dosli na cilj,prema prijedjenom putu
+      let put [moj-put]of first sort-on[prijedjeni-put]mravi;svi mravi koji su ostali su oni koji su na cilju,drugi se brisu
+      let index 0;indeks petlje
+      while[index <= (length put) - 2]
+      [
+        ask links with[(end1 = (item index put) and end2 = (item (index + 1) put)) or (end2 = (item index put) and end1 = (item (index + 1) put))] [set color 53 set thickness 0.7]
+        set index index + 1
+      ]
+    ]
+    []
+    ask mravi[die];na kraju uklonimo ave agente u simulaciji
+  ]
+  [show "Pogresan unos."]
+end

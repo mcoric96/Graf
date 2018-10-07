@@ -1,0 +1,10 @@
+;algoritam za minimalno razapinjuce stablo,Kruskalov algoritam
+
+to kruskal-algoritam;trazimo razzapinjuce stablo grafa ,tako da zbroj tezina bridova bude minimalan
+;Za konstrukciju optimalnog stabla koristimo tzv. Kruskalov algoritam koji se može opisati na sledeći način:
+;KORAK1 Početi od potpuno nepovezanog grafa od čvorova.
+;KORAK2 Poredati sve bridove grafa G tako da im težina bude u rastućem redoslijedu
+;KORAK3 Počevši od "najjeftinijeg" brida dodavati ih grafu vodeći računa da se ne napravi ciklus.
+;KORAK4 Ponoviti KORAK3 sve dok graf ne bude imao n-1 vrid.(stablo ima tocno n-1 brid)
+;Dobijen je podgraf predstavlja minimalno razapinjujuće stablo grafa.
+end

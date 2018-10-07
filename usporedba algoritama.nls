@@ -1,0 +1,62 @@
+;procedure za usporedbu algoritama,u behavior spaceu
+;usporedba
+to usporedba-2
+  ;na pocetku svake kombinacije parametara se u setup commands sa setup procedurom sve postavi na pocetak
+  ;napravimo jedan slucajni graf,na njemu ispitujemo svaki algoritam
+  set Pocetak-puta word(1 + random 4)"" set Kraj-puta word(5 + random 2)"" ;u ovoj kombinaciji nas pocetak i kraj puta koji algortmi pretrazuju
+  random-graf
+  ;iteriramo sve algoritme da dobijemo podatke,ide algoritam,pa ocistimo graf,pa postavimo novog mrava za novu pretragu
+  postavi-pretragu
+  set Algoritam "Dubina" dubina
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Sirina" sirina
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Pohlepni algoritam" pohlepni-algoritam
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Uniform cost" uniform-cost
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Tabu search" tabu-pretraga
+end
+
+to usporedba-1
+  ;na pocetku svake kombinacije parametara se u setup commands sa setup procedurom sve postavi na pocetak
+  ;napravimo jedan slucajni potpuni graf,na njemu ispitujemo svaki algoritam
+  set Pocetak-puta word(1 + random 4)"" set Kraj-puta word(5 + random 2)"" ;u ovoj kombinaciji nas pocetak i kraj puta koji algortmi pretrazuju
+  random-potpuni-graf
+  ;iteriramo sve algoritme da dobijemo podatke,ide algoritam,pa ocistimo graf,pa postavimo novog mrava za novu pretragu
+  postavi-pretragu
+  set Algoritam "Dubina" dubina
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Sirina" sirina
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Pohlepni algoritam" pohlepni-algoritam
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Uniform cost" uniform-cost
+  reset-pretraga
+  postavi-pretragu
+  set Algoritam "Tabu search" tabu-pretraga
+end
+
+to postavi-pretragu
+  if any? links[ask links [set color red set thickness 0.2]]
+  ask vrhovi[set color blue set posjecen? false];postavimo sve vrhove da su plavi,i da nisu posjeceni
+  ask mravi[die];prvo uklonimo sve vec postojece mrave i pripremimo pocetak algoritma
+  ;stvorimo prvog mrava na pocetnom vrhu
+  create-mravi 1
+  [
+    move-to one-of vrhovi with [vrijednost = Pocetak-puta]
+    set vrh-here one-of vrhovi with[vrijednost = Pocetak-puta]
+    ask vrh-here [set posjecen? true]
+    set prijedjeni-put 0
+    set na-cilju? false
+    set moj-put [] set moj-put lput vrh-here moj-put
+    set color yellow 
+  ]
+end

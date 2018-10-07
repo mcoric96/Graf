@@ -1,0 +1,241 @@
+;tu imamo tehnicke procedure za grafove
+
+to postavi-boja-bridova
+  if(count vrhovi > 0);ako imamo vrhove
+  [
+    ask links
+    [
+      set color boja-bridova
+    ]
+  ]
+end
+
+to potpuni-graf[zeljena-tezina];napravimo potpuni graf ako imamo barem 2 razlicita vrha
+  if(count vrhovi) >= 2
+  [
+    ask vrhovi
+    [
+      set susjedi []
+      let id who
+      ask other vrhovi
+      [
+        let drugi who
+        create-link-with vrh id[set color boja-bridova set thickness 0.2 ifelse zeljena-tezina = "" [set zeljena-tezina 1][set tezina zeljena-tezina] set label tezina set label-color black]
+        set susjedi lput (vrh id) susjedi
+        ask vrh id[set susjedi lput (vrh drugi) susjedi]
+      ]
+    ]
+    ask vrhovi[set susjedi remove-duplicates susjedi];na kraju pobrisemo duplikate ako ih ima u svakoj listi susjeda
+  ]
+end
+
+to dodaj-ciklus;dodamo ciklus od n vrhova,trebamo barem 3,jer imamo jednostavne grafove bez visestrukih bridova
+  ifelse count vrhovi >= 3
+  [
+    let lista sort-on[who]vrhovi;idemo od najmanjeg who do najveceg i povezivamo u ciklus
+    let i 0;index petlje
+    while[i < length lista]
+    [
+      ifelse i < (length lista) - 1;ako nije zadnji u listi,povezemo ga sa sljedecim u listi,sa sljedecim indeksom
+      [
+        ask item i lista
+        [
+          create-link-with (item (i + 1) lista)[set color boja-bridova set thickness 0.2 ifelse tezina-brida = "" [set tezina 1] [set tezina tezina-brida] set label tezina set label-color black]
+          ;dodamo za vrh "i" da mu je susjed vrh "i + 1" i obratno
+          set susjedi lput (item (i + 1) lista) susjedi
+          set susjedi remove-duplicates susjedi
+          ask (item (i + 1) lista)[set susjedi lput (item i lista) susjedi set susjedi remove-duplicates susjedi]
+        ]
+      ]
+      [;ako smo dosli do zadnjeg u listi,povezemo ga sa prvim u listi(na indeksu 0)
+        ask item i lista
+        [
+          create-link-with (item 0 lista)[set color boja-bridova set thickness 0.2 ifelse tezina-brida = "" [set tezina 1] [set tezina tezina-brida] set label tezina set label-color black]
+          ;dodamo za vrh "0" da mu je susjed zadnji vrh u listi i obratno
+          set susjedi lput (item 0 lista) susjedi
+          set susjedi remove-duplicates susjedi
+          ask (item 0 lista)[set susjedi lput (item i lista) susjedi set susjedi remove-duplicates susjedi]
+        ]
+      ]
+      set i i + 1
+    ]
+  ]
+  [
+    show "Minimalan broj vrhova je 3 za ciklus u jednostavnom grafu."
+  ]
+end
+
+to ocisti-sve-bridove
+  clear-links;sve linkove brisemo
+  ask vrhovi;svim vrhovima postavimo da nemaju susjeda
+  [
+    set susjedi []
+  ]
+end
+
+to-report povezanost?;pretraga po sirini,ispituje e li graf povezan vraca bool vrijednost
+  if any? vrhovi;ako uopce ima vrhova
+  [
+    if any? vrhovi with[(length susjedi) = 0][ifelse count vrhovi = 1 [report true] [report false]];ako postoje vrhovi koji nisu ni sa jednim vrhom povezani
+    
+    ask vrhovi[set posjecen? false];stavimo da nijedan vrh nije posjecen
+    let pocetak vrh najveci-stupanj;vrh sa najvecim stupnjem
+    ask pocetak[set posjecen? true];posjetimo pocetni vrh,tj taj sa najvecim stupnjem
+    let lista-vrhova [];lista vrhova u koju cemo  dodavat jos neposjecene vrhove
+    set lista-vrhova lput pocetak lista-vrhova;dodamo pocetak u listu
+    while [length lista-vrhova > 0];dok god u komponenti imamo neposjecene vrhove
+    [
+      foreach[susjedi]of first lista-vrhova;gledamo prvi i dodamo sve susjede u listu,koji nisu posjeceni vec
+      [
+        x -> if not[posjecen?]of x [set lista-vrhova lput x lista-vrhova] 
+      ]
+      if not[posjecen?]of first lista-vrhova;ako prvi u listi nije posjecen,posjetimo ga
+      [
+        ask first lista-vrhova[set posjecen? true]
+      ]
+      set lista-vrhova but-first lista-vrhova;izbacimo na kraju prvog i liste,posjetili smo ga i dodali sve njegove susjede koji nisu posjeceni,u listu za posjete
+    ]
+    
+    ifelse count vrhovi with[posjecen?] = count vrhovi [report true] [report false];ako imamo jednako posjecenih i ukupno broja vrhova,ocito je graf povezan,inace nije
+  ]
+end
+
+to-report najveci-stupanj;vraca who od vrha sa najvecim stupnjem
+  let lista [] set lista lput one-of vrhovi lista;slucajni pocetak
+  ask vrhovi
+  [
+    ifelse length susjedi > length[susjedi]of first lista
+    [
+      set lista []
+      set lista lput vrh who lista
+    ]
+    [
+      if length susjedi = length[susjedi]of first lista
+      [set lista lput vrh who lista]
+    ]
+  ]
+  report [who]of first lista
+end
+
+to reset-pretraga
+  if any? vrhovi
+  [
+    ask vrhovi[set color blue]
+    if any? links[ask links[set color red set thickness 0.2]]
+    ask mravi[die]
+  ]
+end
+
+to random-potpuni-graf;napravimo random potpuni graf,za neki broj n vrhova,tezine bridova su random
+  carefully;zbog pogresnog unosa
+  [
+    if n-vrhova >= 1;ako je unesen ispravan broj
+    [
+      ;ako je broj vrhova prirodan broj
+      ifelse n-vrhova = (int n-vrhova)
+      [
+        ifelse min-tezina >= 0 and max-tezina > 0;ako su tezine vece/jednake 0
+        [
+          ifelse min-tezina <= max-tezina;ako je minimalna tezina brida manja/jednaka od maksimane tezine brida grafa
+          [
+            ;prvo pobrisemo sve vrhove koji postoje
+            setup
+            let i 1;brojac petlje
+            while[i <= n-vrhova]
+            [
+               ;napravimo vrh
+               create-vrhovi 1
+               [
+                 set color blue
+                 set shape "circle"
+                 setxy random-xcor random-pycor
+                 set vrijednost word i ""
+                 set size 3
+                 set label vrijednost
+                 set label-color black
+                 set posjecen? false
+                 set susjedi []
+                 set boja ""
+              ]
+              set i i + 1
+            ]
+            ;postavimo potpuni graf,sve vrhove povezemo bridovima 
+            ask vrhovi
+            [
+              let id who;who prvog vrha
+              ask other vrhovi
+              [
+                let drugi who;who drugog vrha
+                if not any? links with[(end1 = vrh id and end2 = vrh drugi) or (end1 = vrh drugi and end2 = vrh id)];ako ne postoji brid izmedju neka 2 vrha
+                [
+                  create-link-with vrh id[set color boja-bridova set thickness 0.2 set tezina (random (max-tezina - min-tezina) + min-tezina) set label tezina set label-color black]
+                  set susjedi lput (vrh id) susjedi
+                  ask vrh id[set susjedi lput (vrh drugi) susjedi]
+                ]
+              ]
+            ]
+            ;postavimo text-boxove na pocetne vrijednosti
+            set min-tezina 0 set max-tezina 0 set n-vrhova 0
+           ]
+          [show "Pogresan unos."]
+        ]
+        [show "Pogresan unos."]
+      ]
+      [show "Pogresan unos"]
+    ]
+  ]
+  [
+    show "Pogresan unos."
+  ]
+end
+
+to random-graf
+  setup;prvo sve brisemo
+  let i 1
+  while[i <= slucajni-graf-n]
+  [
+     ;napravimo vrh sa vrijednosti "i"
+     create-vrhovi 1
+     [
+        set color blue
+        set shape "circle"
+        setxy random-xcor random-pycor
+        set vrijednost word i ""
+        set size 3
+        set label vrijednost
+        set label-color black
+        set posjecen? false
+        set susjedi []
+        set boja ""
+     ]
+     set i i + 1
+  ]
+  while[not povezanost?];sve dok graf nije povezan,povezujemo potpuno nasumicno vrhove
+  [
+    ask one-of vrhovi
+    [
+      let prvi who
+      ask one-of other vrhovi
+      [
+        let drugi who
+        if prvi != drugi
+        [
+          if not any? links with[(end1 = vrh prvi and end2 = vrh drugi) or (end1 = vrh drugi and end2 = vrh prvi)];ako ne postoji brid izmedju neka 2 vrha
+          [
+             create-link-with vrh prvi[set color boja-bridova set thickness 0.2 set tezina ((random 49001) + 1000) set label tezina set label-color black]
+             set susjedi lput (vrh prvi) susjedi
+             ask vrh prvi[set susjedi lput (vrh drugi) susjedi]
+          ]
+        ]
+      ]
+    ]
+  ]
+end
+
+to brisi-lose-puteve;brisemo puteve koji sigurno nisu najbolji  ZA PRETRAGE NAJKRACIH PUTOVA
+  if any? mravi with[na-cilju?]
+  [
+    ;gledamo najbolji(najmanji) prijedjeni-put od svih koji su stigli na cilj ,i brisemo sve mrave koji imaju veci prijedjeni-put od tog najmanjeg
+    ask mravi with[prijedjeni-put > [prijedjeni-put] of first sort-on[prijedjeni-put](mravi with[na-cilju?])][die]
+  ]
+end

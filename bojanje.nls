@@ -1,0 +1,65 @@
+;procedure za 2-bojanje grafova
+
+to pravilno-2-bojanje?;istrazujemo je li moguce pravilno 2 bojanje grafa,samo 2 boje,tada graf treba biti bipartitni
+  ;algoritam je konstrukcijski,pokusamo konstruirati pravilno 2-bojanje,ako dodjemo u kontradikciju da to nije moguce,jednostavno vratimo poruku da nije moguce
+  ;za provjeru je li graf k-obojiv za k>=3 je NP problem,zato radimo 2-obojivost
+  ;ne koristimo matematicke provjere GRAF JE 2-OBOJIV AKO I SAMO AKO JE BIPARTITAN,koristimo algoritme pretrage iz umjetne inteligencije
+    
+  ;moramo imati povezan graf,iako bi mogli primjenit metodu na svaku komponentu posebno,no zbog jednostavnosti zahtjevamo povezan graf
+  if count vrhovi >= 2 and povezanost?;mozemo traziti pravilno 2-bojanje tek kad je graf povezan i kad imamo barem 2 vrha
+  [
+    ask vrhovi[set boja ""];prvo svima izbrisemo boju
+    
+    ;vrh sa najvisim stupnjem obojimo nekako,recimo u crvenu
+    ask vrh najveci-stupanj
+    [set boja red]
+    let zadnje-bojanje red;oznaka da znamo kojom bojom smo zadnje bojali vrhove
+    ;dok ima neobojanih vrhova,koristimo pretragu po sirini za bojanje novih vrhova
+    while [any? vrhovi with[boja = ""]]
+    [
+      ;implementacija pretrazivanja po sirini se odnosi na "sirenje" cvorova koje bojimo,tj redoslijed kojim dolazimo do cvorova koji nisu obojeni,polazeci od pocetnog vrha
+      ifelse zadnje-bojanje = red
+      [;ako je zadnje bojanje bilo CRVENOM bojom,sad bojimo PLAVOM
+        ask vrhovi with[boja = red]
+        [
+          foreach susjedi
+          [
+            x -> if [boja]of x = ""[ask x[set boja blue]]
+          ]
+        ]
+        set zadnje-bojanje blue
+      ]
+      [ ;ako je zadnje bojanje bilo PLAVOM bojom,sad bojimo CRVENOM
+        ask vrhovi with[boja = blue]
+        [
+          foreach susjedi
+          [
+            x -> if [boja]of x = ""[ask x[set boja red]]
+          ]
+        ]
+        set zadnje-bojanje red
+      ]
+    ]
+    ;sad idemo jedan po jedan brid i ako vidimo da dva susjeda imaju istu boju,ocit pravilno 2-bojanje ne postoji,inace smo ga konstruirali
+    let bojanje? true
+    ask links
+    [
+      if [boja]of end1 = [boja]of end2
+      [
+        set bojanje? false
+        stop
+      ]
+    ]
+    ifelse bojanje?;postoji bojanje
+    [
+      ask vrhovi
+      [
+        set color boja
+      ]
+    ]
+    [;ne postoji bojanje
+      user-message "Ne postoji pravilno bojanje grafa.Graf nije bipartitan."
+      ask vrhovi with[pcolor != blue][set color blue]
+    ]
+  ]
+end
