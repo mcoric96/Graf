@@ -1,7 +1,7 @@
 # Shortest path solver
 
 <p align="center">
-  <img src="http://cs.lmu.edu/~ray/images/agraph.png">
+  <img height="350" width="350" src="https://s3.amazonaws.com/dev.assets.neo4j.com/wp-content/uploads/20181010053206/dijkstras-algorithm-example-part-eight.png">
 </p>
 
 This project is made for my course Introduction to artificial intelligence using tool NetLogo.
